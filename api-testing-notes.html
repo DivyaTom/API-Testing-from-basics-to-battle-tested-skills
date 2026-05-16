@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>API Testing Notes — Intermediate</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f5f5f3; --bg3: #eeede9;
+    --text: #1a1a18; --text2: #5f5e5a; --text3: #888780;
+    --border: rgba(0,0,0,0.12); --border2: rgba(0,0,0,0.22);
+    --blue-bg: #E6F1FB; --blue-text: #0C447C; --blue-mid: #3B8BD4;
+    --green-bg: #EAF3DE; --green-text: #27500A; --green-mid: #5DCAA5;
+    --amber-bg: #FAEEDA; --amber-text: #633806; --amber-mid: #EF9F27;
+    --red-bg: #FCEBEB; --red-text: #791F1F; --red-mid: #E24B4A;
+    --purple-bg: #EEEDFE; --purple-text: #3C3489; --purple-mid: #7F77DD;
+    --teal-mid: #1D9E75;
+    --radius: 12px; --radius-sm: 8px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a; --bg2: #252523; --bg3: #2e2e2b;
+      --text: #e8e6df; --text2: #b4b2a9; --text3: #888780;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.2);
+      --blue-bg: #042C53; --blue-text: #B5D4F4;
+      --green-bg: #173404; --green-text: #C0DD97;
+      --amber-bg: #412402; --amber-text: #FAC775;
+      --red-bg: #501313; --red-text: #F7C1C1;
+      --purple-bg: #26215C; --purple-text: #CECBF6;
+    }
+  }
+  body { font-family: var(--font); background: var(--bg3); color: var(--text); min-height: 100vh; }
+  .page { max-width: 780px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  h1 { font-size: 28px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .subtitle { font-size: 15px; color: var(--text3); margin-bottom: 2rem; }
+  h2 { font-size: 20px; font-weight: 600; color: var(--text); margin: 2rem 0 1rem; }
+  h3 { font-size: 16px; font-weight: 600; color: var(--text); margin: 1.2rem 0 0.6rem; }
+  p { font-size: 15px; line-height: 1.7; color: var(--text2); margin-bottom: 0.8rem; }
+  em { font-style: italic; }
+  code { font-family: var(--mono); font-size: 12px; background: var(--bg3); padding: 1px 5px; border-radius: 4px; }
+
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .code-block { background: var(--bg2); border-radius: var(--radius-sm); padding: 0.7rem 1rem; font-family: var(--mono); font-size: 13px; color: var(--text); margin: 0.5rem 0; border: 0.5px solid var(--border); line-height: 1.6; white-space: pre-wrap; word-break: break-all; }
+
+  .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; margin-right: 6px; }
+  .pill-get    { background: var(--blue-bg);   color: var(--blue-text); }
+  .pill-post   { background: var(--green-bg);  color: var(--green-text); }
+  .pill-put    { background: var(--amber-bg);  color: var(--amber-text); }
+  .pill-del    { background: var(--red-bg);    color: var(--red-text); }
+  .pill-patch  { background: var(--purple-bg); color: var(--purple-text); }
+
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0.8rem 0; }
+  .metric { background: var(--bg2); border-radius: var(--radius-sm); padding: 0.75rem; }
+  .metric .label { font-size: 12px; color: var(--text3); }
+  .metric .value { font-size: 14px; font-weight: 500; color: var(--text); margin-top: 2px; }
+
+  .tip { border-left: 3px solid; padding: 0.7rem 1rem; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; margin: 0.8rem 0; font-size: 14px; line-height: 1.6; color: var(--text2); }
+  .tip-info    { border-color: var(--blue-mid);  background: var(--blue-bg);  color: var(--blue-text); }
+  .tip-warn    { border-color: var(--amber-mid); background: var(--amber-bg); color: var(--amber-text); }
+  .tip-success { border-color: var(--teal-mid);  background: var(--green-bg); color: var(--green-text); }
+
+  .status-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 0.8rem 0; }
+  .s-card { border-radius: var(--radius-sm); padding: 0.7rem; text-align: center; }
+  .s2 { background: var(--green-bg); color: var(--green-text); }
+  .s3 { background: var(--amber-bg); color: var(--amber-text); }
+  .s4 { background: var(--red-bg);   color: var(--red-text); }
+  .s5 { background: var(--purple-bg); color: var(--purple-text); }
+  .s-code { font-size: 20px; font-weight: 600; }
+  .s-desc { font-size: 11px; margin-top: 2px; }
+
+  .tab-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .tab-btn { font-size: 13px; font-family: var(--font); padding: 6px 16px; border-radius: 20px; border: 0.5px solid var(--border2); background: transparent; cursor: pointer; color: var(--text2); transition: all 0.15s; }
+  .tab-btn:hover { background: var(--bg2); }
+  .tab-btn.active { background: var(--text); color: var(--bg); border-color: transparent; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  .checklist { list-style: none; }
+  .checklist li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--text2); padding: 6px 0; border-bottom: 0.5px solid var(--border); }
+  .checklist li:last-child { border-bottom: none; }
+  .chk { width: 17px; height: 17px; min-width: 17px; border: 0.5px solid var(--border2); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; margin-top: 1px; background: var(--bg); transition: all 0.15s; }
+  .chk.done { background: var(--green-bg); border-color: var(--teal-mid); color: var(--green-text); }
+
+  .chart-wrap { position: relative; margin: 1rem 0; }
+
+  .quiz-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+  .quiz-q { font-size: 15px; font-weight: 500; color: var(--text); margin-bottom: 0.8rem; }
+  .quiz-opts { display: flex; flex-direction: column; gap: 6px; }
+  .opt-btn { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 9px 13px; font-size: 14px; font-family: var(--font); text-align: left; cursor: pointer; color: var(--text); transition: background 0.15s; }
+  .opt-btn:hover { background: var(--bg3); }
+  .opt-btn.correct { background: var(--green-bg); border-color: var(--teal-mid); color: var(--green-text); }
+  .opt-btn.wrong   { background: var(--red-bg);   border-color: var(--red-mid);  color: var(--red-text); }
+  .feedback { font-size: 13px; margin-top: 8px; padding: 7px 11px; border-radius: var(--radius-sm); display: none; }
+  .fb-ok { background: var(--green-bg); color: var(--green-text); }
+  .fb-no { background: var(--red-bg);   color: var(--red-text); }
+
+  .score-row { display: flex; align-items: center; gap: 12px; margin-bottom: 1rem; }
+  .score-label { font-size: 14px; color: var(--text2); white-space: nowrap; }
+  .score-bar { flex: 1; height: 8px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 4px; background: var(--teal-mid); transition: width 0.4s; width: 0%; }
+
+  hr { border: none; border-top: 0.5px solid var(--border); margin: 2rem 0; }
+
+  @media (max-width: 500px) {
+    .grid2 { grid-template-columns: 1fr; }
+    h1 { font-size: 22px; }
+  }
+
+  .intro-section { padding: 2.5rem 0 2rem; border-bottom: 0.5px solid var(--border); margin-bottom: 2rem; }
+  .intro-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--blue-text); background: var(--blue-bg); padding: 4px 14px; border-radius: 20px; margin-bottom: 1.2rem; }
+  .intro-title { font-size: 32px; font-weight: 700; color: var(--text); line-height: 1.25; margin-bottom: 0.7rem; }
+  .intro-desc { font-size: 16px; color: var(--text2); line-height: 1.75; max-width: 580px; margin-bottom: 2rem; }
+  .intro-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 2rem; }
+  .intro-stat { background: var(--bg2); border-radius: var(--radius-sm); padding: 0.9rem 1rem; }
+  .intro-stat-num { font-size: 24px; font-weight: 700; color: var(--text); }
+  .intro-stat-lbl { font-size: 12px; color: var(--text3); margin-top: 2px; }
+  .intro-divider { border: none; border-top: 0.5px solid var(--border); margin: 1.8rem 0; }
+  .intro-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.8rem; }
+  .intro-card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 1rem 1.1rem; }
+  .intro-card-icon { font-size: 22px; margin-bottom: 8px; }
+  .intro-card-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .intro-card-desc { font-size: 13px; color: var(--text2); line-height: 1.55; }
+  .prereq-box { background: var(--bg2); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 1.8rem; }
+  .prereq-label { font-size: 12px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+  .prereq-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: var(--text2); padding: 5px 0; }
+  .prereq-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .dot-green { background: var(--teal-mid); }
+  .dot-amber { background: var(--amber-mid); }
+  .intro-cta { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn-primary { font-size: 14px; font-family: var(--font); padding: 10px 22px; border-radius: var(--radius-sm); cursor: pointer; background: var(--text); color: var(--bg); border: none; font-weight: 600; transition: opacity 0.15s; }
+  .btn-secondary { font-size: 14px; font-family: var(--font); padding: 10px 22px; border-radius: var(--radius-sm); cursor: pointer; background: transparent; color: var(--text2); border: 0.5px solid var(--border2); transition: opacity 0.15s; }
+  .btn-primary:hover, .btn-secondary:hover { opacity: 0.75; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- INTRO -->
+  <div class="intro-section">
+    <div class="intro-badge">⚡ Intermediate level</div>
+    <h1 class="intro-title">API Testing —<br>from basics to battle-tested</h1>
+    <p class="intro-desc">A hands-on reference covering everything an intermediate tester needs: HTTP methods, status codes, authentication, security, and advanced techniques — with charts, checklists, and a quiz to lock in what you learn.</p>
+
+    <div class="intro-stats">
+      <div class="intro-stat"><div class="intro-stat-num">6</div><div class="intro-stat-lbl">Topic sections</div></div>
+      <div class="intro-stat"><div class="intro-stat-num">7</div><div class="intro-stat-lbl">Quiz questions</div></div>
+      <div class="intro-stat"><div class="intro-stat-num">5</div><div class="intro-stat-lbl">Charts</div></div>
+      <div class="intro-stat"><div class="intro-stat-num">14+</div><div class="intro-stat-lbl">Test checklists</div></div>
+    </div>
+
+    <div class="intro-cards">
+      <div class="intro-card">
+        <div class="intro-card-icon">📡</div>
+        <div class="intro-card-title">HTTP methods</div>
+        <div class="intro-card-desc">GET, POST, PUT, PATCH, DELETE — what to send and what to verify for each.</div>
+      </div>
+      <div class="intro-card">
+        <div class="intro-card-icon">🔒</div>
+        <div class="intro-card-title">Auth & security</div>
+        <div class="intro-card-desc">API keys, JWTs, OAuth 2.0, and the security tests you should never skip.</div>
+      </div>
+      <div class="intro-card">
+        <div class="intro-card-icon">📊</div>
+        <div class="intro-card-title">Status codes</div>
+        <div class="intro-card-desc">All 2xx–5xx codes explained, with the tricky distinctions called out clearly.</div>
+      </div>
+      <div class="intro-card">
+        <div class="intro-card-icon">🧪</div>
+        <div class="intro-card-title">Advanced techniques</div>
+        <div class="intro-card-desc">Contract testing, performance testing, negative testing, and chaining requests.</div>
+      </div>
+    </div>
+
+    <div class="prereq-box">
+      <div class="prereq-label">What you should already know</div>
+      <div class="prereq-item"><span class="prereq-dot dot-green"></span>What an API is and how to send a basic request</div>
+      <div class="prereq-item"><span class="prereq-dot dot-green"></span>The difference between a client and a server</div>
+      <div class="prereq-item"><span class="prereq-dot dot-green"></span>Basic JSON structure</div>
+      <div class="prereq-item"><span class="prereq-dot dot-amber"></span>You don't need to know security or performance testing yet — this covers it</div>
+    </div>
+
+    <div class="intro-cta">
+      <button class="btn-primary" onclick="document.querySelector('.tab-row').scrollIntoView({behavior:'smooth'})">Start learning →</button>
+      <button class="btn-secondary" onclick="switchTab('quiz', document.querySelectorAll('.tab-btn')[5])">Jump to quiz</button>
+    </div>
+  </div>
+
+  <div class="tab-row">
+    <button class="tab-btn active" onclick="switchTab('fundamentals',this)">Core Concepts</button>
+    <button class="tab-btn" onclick="switchTab('methods',this)">HTTP Methods</button>
+    <button class="tab-btn" onclick="switchTab('status',this)">Status Codes</button>
+    <button class="tab-btn" onclick="switchTab('auth',this)">Auth & Security</button>
+    <button class="tab-btn" onclick="switchTab('advanced',this)">Advanced Testing</button>
+    <button class="tab-btn" onclick="switchTab('quiz',this)">Quick Quiz</button>
+  </div>
+
+  <!-- CORE CONCEPTS -->
+  <div class="tab-panel active" id="tab-fundamentals">
+    <h2>What is API Testing?</h2>
+    <p>API testing checks that an application's programming interface works correctly — sending requests, validating responses, and making sure data flows properly between systems. At the intermediate level, you go beyond "does it return 200?" to asking <em>why</em>, <em>how fast</em>, and <em>what happens when things go wrong</em>.</p>
+    <div class="tip tip-info">A REST API is like a waiter at a restaurant. You (the client) place an order (request), the waiter (API) passes it to the kitchen (server), and brings back your food (response).</div>
+
+    <h3>Request Anatomy</h3>
+    <div class="card">
+      <div class="grid2">
+        <div class="metric"><div class="label">Endpoint (URL)</div><div class="value">Where you send the request</div></div>
+        <div class="metric"><div class="label">Method</div><div class="value">What action to take (GET, POST…)</div></div>
+        <div class="metric"><div class="label">Headers</div><div class="value">Metadata (auth token, content type)</div></div>
+        <div class="metric"><div class="label">Body / Payload</div><div class="value">Data sent (POST/PUT only)</div></div>
+      </div>
+      <div class="code-block">POST /api/users HTTP/1.1
+Authorization: Bearer &lt;token&gt;
+Content-Type: application/json
+
+{ "name": "Alice", "email": "alice@example.com" }</div>
+    </div>
+
+    <h3>Response Anatomy</h3>
+    <div class="card">
+      <div class="grid2">
+        <div class="metric"><div class="label">Status Code</div><div class="value">200, 201, 400, 500…</div></div>
+        <div class="metric"><div class="label">Response Headers</div><div class="value">Content-Type, Cache-Control…</div></div>
+        <div class="metric"><div class="label">Response Body</div><div class="value">JSON / XML / plain text</div></div>
+        <div class="metric"><div class="label">Response Time</div><div class="value">How long the server took</div></div>
+      </div>
+    </div>
+
+    <h3>Key Testing Types</h3>
+    <div class="chart-wrap" style="height:240px;"><canvas id="testTypesChart"></canvas></div>
+
+    <h3>Testing Checklist</h3>
+    <ul class="checklist">
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Verify correct HTTP method is used</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Validate response status code matches expectation</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Check response body schema and data types</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Confirm authentication tokens are handled correctly</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Test with invalid inputs (negative testing)</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Measure response time against SLA</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Test edge cases (empty strings, null, huge numbers)</li>
+    </ul>
+  </div>
+
+  <!-- HTTP METHODS -->
+  <div class="tab-panel" id="tab-methods">
+    <h2>HTTP Methods Deep Dive</h2>
+    <p>Each HTTP method has a specific purpose. A good API tester knows not just what they do, but what to <em>verify</em> when testing each one.</p>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span class="pill pill-get">GET</span><strong>Retrieve data</strong></div>
+      <p>Fetches a resource without modifying it. Should be safe and idempotent.</p>
+      <div class="code-block">GET /api/users/123</div>
+      <div class="tip tip-success">✓ Test: Response body matches expected schema. Multiple identical GETs return same result. No side effects on server.</div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span class="pill pill-post">POST</span><strong>Create a resource</strong></div>
+      <p>Sends data to create a new resource. Not idempotent — calling it twice creates two records.</p>
+      <div class="code-block">POST /api/users
+Body: { "name": "Bob" }</div>
+      <div class="tip tip-success">✓ Test: Returns 201 Created. Location header contains new resource URL. Duplicate POST creates second record.</div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span class="pill pill-put">PUT</span><strong>Replace a resource</strong></div>
+      <p>Replaces the entire resource. Idempotent — calling it multiple times has the same effect.</p>
+      <div class="code-block">PUT /api/users/123
+Body: { "name": "Bob", "email": "bob@test.com" }</div>
+      <div class="tip tip-warn">⚠ Missing fields in PUT body are treated as null/removed. Test that omitting a field doesn't silently delete data.</div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span class="pill pill-patch">PATCH</span><strong>Partially update</strong></div>
+      <p>Updates only the fields you send. Other fields remain unchanged.</p>
+      <div class="code-block">PATCH /api/users/123
+Body: { "name": "Bobby" }</div>
+      <div class="tip tip-success">✓ Test: Only the patched field changed. All other fields remain exactly as before.</div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><span class="pill pill-del">DELETE</span><strong>Remove a resource</strong></div>
+      <p>Deletes the specified resource. Should be idempotent — deleting twice shouldn't cause an error.</p>
+      <div class="code-block">DELETE /api/users/123</div>
+      <div class="tip tip-success">✓ Test: Returns 204 No Content. Second DELETE returns 404. GET after DELETE returns 404.</div>
+    </div>
+
+    <h3>Idempotency at a Glance</h3>
+    <div class="chart-wrap" style="height:200px;"><canvas id="idempotencyChart"></canvas></div>
+  </div>
+
+  <!-- STATUS CODES -->
+  <div class="tab-panel" id="tab-status">
+    <h2>Status Codes — Know What to Expect</h2>
+    <p>Status codes tell you what the server did with your request. Intermediate testers need to know the nuance between similar codes.</p>
+
+    <h3>2xx — Success</h3>
+    <div class="status-grid">
+      <div class="s-card s2"><div class="s-code">200</div><div class="s-desc">OK — general success</div></div>
+      <div class="s-card s2"><div class="s-code">201</div><div class="s-desc">Created — POST success</div></div>
+      <div class="s-card s2"><div class="s-code">204</div><div class="s-desc">No Content — DELETE ok</div></div>
+      <div class="s-card s2"><div class="s-code">206</div><div class="s-desc">Partial Content — range</div></div>
+    </div>
+
+    <h3>3xx — Redirects</h3>
+    <div class="status-grid">
+      <div class="s-card s3"><div class="s-code">301</div><div class="s-desc">Moved Permanently</div></div>
+      <div class="s-card s3"><div class="s-code">302</div><div class="s-desc">Temporary Redirect</div></div>
+      <div class="s-card s3"><div class="s-code">304</div><div class="s-desc">Not Modified (cached)</div></div>
+    </div>
+    <div class="tip tip-info">301 vs 302: A 301 means update your bookmarks permanently. A 302 means use the new URL just this once.</div>
+
+    <h3>4xx — Client Errors</h3>
+    <div class="status-grid">
+      <div class="s-card s4"><div class="s-code">400</div><div class="s-desc">Bad Request</div></div>
+      <div class="s-card s4"><div class="s-code">401</div><div class="s-desc">Unauthorized</div></div>
+      <div class="s-card s4"><div class="s-code">403</div><div class="s-desc">Forbidden</div></div>
+      <div class="s-card s4"><div class="s-code">404</div><div class="s-desc">Not Found</div></div>
+      <div class="s-card s4"><div class="s-code">409</div><div class="s-desc">Conflict</div></div>
+      <div class="s-card s4"><div class="s-code">422</div><div class="s-desc">Unprocessable Entity</div></div>
+      <div class="s-card s4"><div class="s-code">429</div><div class="s-desc">Too Many Requests</div></div>
+    </div>
+    <div class="tip tip-warn">⚠ 401 vs 403: 401 = "I don't know who you are." 403 = "I know who you are, but you can't do this." Many APIs get these backwards!</div>
+
+    <h3>5xx — Server Errors</h3>
+    <div class="status-grid">
+      <div class="s-card s5"><div class="s-code">500</div><div class="s-desc">Internal Server Error</div></div>
+      <div class="s-card s5"><div class="s-code">502</div><div class="s-desc">Bad Gateway</div></div>
+      <div class="s-card s5"><div class="s-code">503</div><div class="s-desc">Service Unavailable</div></div>
+      <div class="s-card s5"><div class="s-code">504</div><div class="s-desc">Gateway Timeout</div></div>
+    </div>
+
+    <h3>Status Code Frequency in Production</h3>
+    <div class="chart-wrap" style="height:240px;"><canvas id="statusChart"></canvas></div>
+    <div id="status-legend" style="display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;font-size:12px;color:var(--text3)"></div>
+  </div>
+
+  <!-- AUTH & SECURITY -->
+  <div class="tab-panel" id="tab-auth">
+    <h2>Authentication & Security Testing</h2>
+    <p>Security bugs in APIs are extremely common and often high-severity. As an intermediate tester, you should actively look for these.</p>
+
+    <h3>Common Auth Methods</h3>
+    <div class="card">
+      <h3 style="margin-top:0">API Keys</h3>
+      <p>A static string sent with every request. Simple but less secure than token-based approaches.</p>
+      <div class="code-block">GET /api/data?api_key=abc123
+// or in header:
+X-API-Key: abc123</div>
+      <div class="tip tip-warn">⚠ Test: What happens if the key is expired? Shared between users? Sent over HTTP not HTTPS?</div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">Bearer Tokens (JWT)</h3>
+      <p>A signed token containing claims about the user. Most common in modern REST APIs. The server verifies the signature without checking a database.</p>
+      <div class="code-block">Authorization: Bearer eyJhbGci...</div>
+      <div class="tip tip-warn">⚠ Test: Expired token → 401? Tampered token → 401? Token from User A used for User B's data → 403?</div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0">OAuth 2.0</h3>
+      <p>An authorization framework where users grant apps limited access to their account.</p>
+      <div class="grid2">
+        <div class="metric"><div class="label">Authorization Code</div><div class="value">Web apps (most secure)</div></div>
+        <div class="metric"><div class="label">Client Credentials</div><div class="value">Machine-to-machine</div></div>
+        <div class="metric"><div class="label">Implicit</div><div class="value">Legacy (avoid)</div></div>
+        <div class="metric"><div class="label">Device Code</div><div class="value">Smart TVs, CLI tools</div></div>
+      </div>
+    </div>
+
+    <h3>Security Test Cases to Always Run</h3>
+    <ul class="checklist">
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Access another user's resource with your token (BOLA / IDOR)</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Send a request with no auth header → expect 401</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Send an expired token → expect 401</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Modify JWT payload (change user ID) → expect 401</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Try admin endpoints as a regular user → expect 403</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>SQL injection in query params: <code>?id=1' OR '1'='1</code></li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Rapid fire requests to check rate limiting (429)</li>
+    </ul>
+    <div class="tip tip-info">BOLA (Broken Object Level Authorization) is the #1 API vulnerability. If you can access <code>/api/users/456</code> while logged in as user 123, that's a critical bug.</div>
+  </div>
+
+  <!-- ADVANCED -->
+  <div class="tab-panel" id="tab-advanced">
+    <h2>Advanced Testing Techniques</h2>
+    <p>These techniques separate good API testers from great ones.</p>
+
+    <h3>Contract Testing</h3>
+    <p>Verifies that the API matches its documented contract (usually OpenAPI/Swagger). Catches when the team changes an API response without updating the docs.</p>
+    <div class="card">
+      <div class="grid2">
+        <div class="metric"><div class="label">Tools</div><div class="value">Pact, Dredd, Schemathesis</div></div>
+        <div class="metric"><div class="label">What it checks</div><div class="value">Response schema, field types, required fields</div></div>
+      </div>
+      <div class="tip tip-success">If the API says it returns <code>{ "id": number }</code> but returns <code>{ "id": string }</code>, contract testing catches it.</div>
+    </div>
+
+    <h3>Performance Testing Types</h3>
+    <div class="card">
+      <div class="grid2">
+        <div class="metric"><div class="label">Load Testing</div><div class="value">Normal expected load</div></div>
+        <div class="metric"><div class="label">Stress Testing</div><div class="value">Beyond max capacity</div></div>
+        <div class="metric"><div class="label">Spike Testing</div><div class="value">Sudden traffic bursts</div></div>
+        <div class="metric"><div class="label">Soak Testing</div><div class="value">Sustained load over time</div></div>
+      </div>
+    </div>
+
+    <h3>Response Time Under Load</h3>
+    <div class="chart-wrap" style="height:240px;"><canvas id="perfChart"></canvas></div>
+
+    <h3>Negative Testing Patterns</h3>
+    <ul class="checklist">
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Send empty string where value is required</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Send null for non-nullable fields</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Exceed max field length (e.g. 10,000 char string in a "name" field)</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Send wrong data types (string instead of integer)</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Omit required fields entirely</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Send extra unknown fields (mass assignment risk)</li>
+      <li><span class="chk" onclick="toggleCheck(this)"></span>Non-existent resource IDs (e.g. <code>GET /users/99999999</code>)</li>
+    </ul>
+
+    <h3>Chaining Requests</h3>
+    <p>Real-world API tests link multiple calls together. The output of one becomes the input of the next.</p>
+    <div class="code-block">// Step 1: POST /auth/login  → extract token
+// Step 2: POST /api/orders  → extract order_id
+// Step 3: GET  /api/orders/{order_id} → verify created
+// Step 4: DELETE /api/orders/{order_id} → cleanup</div>
+    <div class="tip tip-info">Always clean up test data. Use unique identifiers (timestamps or UUIDs) in test data to avoid conflicts with other tests.</div>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="tab-panel" id="tab-quiz">
+    <h2>Quick Quiz</h2>
+    <div class="score-row">
+      <span class="score-label">Score: <span id="score-display">0 / 7</span></span>
+      <div class="score-bar"><div class="score-fill" id="score-fill"></div></div>
+    </div>
+    <div id="quiz-container"></div>
+  </div>
+</div>
+
+<script>
+const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+const textCol  = isDark ? '#b4b2a9' : '#5f5e5a';
+const gridCol  = isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.07)';
+const FONT = { family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif", size: 12 };
+
+let chartsRendered = {};
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (!chartsRendered[name]) { chartsRendered[name] = true; renderCharts(name); }
+}
+
+function toggleCheck(el) {
+  el.classList.toggle('done');
+  el.textContent = el.classList.contains('done') ? '✓' : '';
+}
+
+function renderCharts(tab) {
+  if (tab === 'fundamentals') {
+    new Chart(document.getElementById('testTypesChart'), {
+      type: 'bar',
+      data: {
+        labels: ['Functional','Integration','Security','Performance','Contract'],
+        datasets: [{ label: 'Complexity', data: [2,4,7,6,5],
+          backgroundColor: ['#B5D4F4','#85B7EB','#5DCAA5','#1D9E75','#9FE1CB'],
+          borderRadius: 6, borderSkipped: false }]
+      },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: textCol, font: FONT }, grid: { display: false } },
+          y: { ticks: { color: textCol, font: FONT, callback: v => ['','Beginner','','Intermediate','','Advanced','','Expert'][v]||'' }, grid: { color: gridCol }, max: 8 }
+        }
+      }
+    });
+  }
+  if (tab === 'methods') {
+    new Chart(document.getElementById('idempotencyChart'), {
+      type: 'bar',
+      data: {
+        labels: ['GET','POST','PUT','PATCH','DELETE'],
+        datasets: [
+          { label: 'Safe (no side effects)', data: [1,0,0,0,0], backgroundColor: '#97C459', borderRadius: 4, borderSkipped: false },
+          { label: 'Idempotent (same result each time)', data: [1,0,1,0,1], backgroundColor: '#3B8BD4', borderRadius: 4, borderSkipped: false }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position:'top', labels:{ color: textCol, font: FONT, usePointStyle:true, pointStyle:'rect' } } },
+        scales: { x:{ ticks:{color:textCol,font:FONT}, grid:{display:false} }, y:{display:false,max:1.5} }
+      }
+    });
+  }
+  if (tab === 'status') {
+    new Chart(document.getElementById('statusChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['2xx Success','4xx Client Error','5xx Server Error','3xx Redirect'],
+        datasets: [{ data:[72,20,5,3], backgroundColor:['#5DCAA5','#E24B4A','#7F77DD','#EF9F27'], borderWidth:0, hoverOffset:6 }]
+      },
+      options: { responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:c=>' '+c.label+': '+c.raw+'%'}} }
+      }
+    });
+    const leg = document.getElementById('status-legend');
+    [['#5DCAA5','2xx Success 72%'],['#E24B4A','4xx Client 20%'],['#7F77DD','5xx Server 5%'],['#EF9F27','3xx Redirect 3%']].forEach(([c,l])=>{
+      leg.innerHTML+=`<span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:2px;background:${c}"></span>${l}</span>`;
+    });
+  }
+  if (tab === 'advanced') {
+    new Chart(document.getElementById('perfChart'), {
+      type: 'line',
+      data: {
+        labels:[10,50,100,200,300,500,700,1000],
+        datasets:[{ label:'Response time (ms)', data:[45,52,68,95,140,280,520,1200],
+          borderColor:'#E24B4A', backgroundColor:'rgba(226,75,74,0.08)', fill:true,
+          tension:0.4, pointBackgroundColor:'#E24B4A', pointRadius:4 }]
+      },
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{ title:{display:true,text:'Concurrent users',color:textCol,font:FONT}, ticks:{color:textCol,font:FONT}, grid:{color:gridCol} },
+          y:{ title:{display:true,text:'Response time (ms)',color:textCol,font:FONT}, ticks:{color:textCol,font:FONT}, grid:{color:gridCol} }
+        }
+      }
+    });
+  }
+}
+
+// Quiz
+const questions = [
+  { q:'Which HTTP method should you use to partially update a single field on a resource?', opts:['PUT','POST','PATCH','UPDATE'], ans:2, fb:'PATCH updates only the fields you send. PUT replaces the entire resource.' },
+  { q:'A user is logged in but tries to access an admin-only endpoint. What status code should the API return?', opts:['401 Unauthorized','404 Not Found','403 Forbidden','400 Bad Request'], ans:2, fb:'403 means "I know who you are, but you are not allowed here." 401 means the user is not authenticated at all.' },
+  { q:'What is idempotency in HTTP methods?', opts:['The request returns a 200 status','Calling the same endpoint multiple times has the same effect','The API requires no authentication','The response is always cached'], ans:1, fb:'An idempotent method produces the same result regardless of how many times you call it. GET, PUT, DELETE are idempotent. POST is not.' },
+  { q:'BOLA / IDOR refers to what kind of vulnerability?', opts:['Injecting SQL into query params',"Accessing another user's resource with your own token",'Sending requests without any auth header','Exceeding the rate limit'], ans:1, fb:"BOLA (Broken Object Level Authorization) means the API doesn't check if you own the resource you're requesting. It's the #1 API security risk." },
+  { q:'A POST to /api/users returns 200. Is this correct REST practice?', opts:['Yes, 200 is always fine for success','No, a successful resource creation should return 201 Created','Yes, if the body contains the new user','No, POST should return 204 No Content'], ans:1, fb:'REST convention says POST creating a new resource should return 201 Created, ideally with a Location header pointing to the new resource.' },
+  { q:'Which tool is most commonly used for contract testing APIs?', opts:['Postman','Pact','JMeter','Wireshark'], ans:1, fb:'Pact is the leading consumer-driven contract testing tool. JMeter is for performance, Wireshark for network analysis.' },
+  { q:'What does a 429 status code mean?', opts:['The request body is malformed','The resource was not found','Too many requests — rate limit hit','The server is temporarily unavailable'], ans:2, fb:'429 Too Many Requests is returned when a client exceeds the API\'s rate limit. Good APIs include a Retry-After header telling you when to try again.' },
+];
+
+let score = 0;
+
+function renderQuiz() {
+  const c = document.getElementById('quiz-container');
+  questions.forEach((q,i) => {
+    const d = document.createElement('div'); d.className='quiz-card';
+    d.innerHTML=`<div class="quiz-q">${i+1}. ${q.q}</div>
+      <div class="quiz-opts">${q.opts.map((o,j)=>`<button class="opt-btn" onclick="answer(this,${i},${j})">${o}</button>`).join('')}</div>
+      <div class="feedback" id="fb-${i}"></div>`;
+    c.appendChild(d);
+  });
+}
+
+function answer(btn,qi,oi) {
+  const card=btn.closest('.quiz-card');
+  if(card.dataset.answered) return;
+  card.dataset.answered='1';
+  const ok=oi===questions[qi].ans;
+  btn.classList.add(ok?'correct':'wrong');
+  if(!ok) card.querySelectorAll('.opt-btn')[questions[qi].ans].classList.add('correct');
+  else score++;
+  const fb=document.getElementById('fb-'+qi);
+  fb.textContent=(ok?'✓ Correct! ':'✗ Not quite. ')+questions[qi].fb;
+  fb.className='feedback '+(ok?'fb-ok':'fb-no');
+  fb.style.display='block';
+  card.querySelectorAll('.opt-btn').forEach(b=>b.style.pointerEvents='none');
+  document.getElementById('score-display').textContent=score+' / '+questions.length;
+  document.getElementById('score-fill').style.width=Math.round((score/questions.length)*100)+'%';
+}
+
+// Init
+chartsRendered['fundamentals'] = true;
+renderCharts('fundamentals');
+renderQuiz();
+</script>
+</body>
+</html>
